@@ -1,0 +1,23 @@
+description: One row per agent as currently held in the policy admin system. Grain = Agent_BK.
+source: {source: policy_admin, table: agent}
+load: {mode: full}
+dedupe_order_by: ["_ingested_at desc"]
+columns:
+  - name: Agent_BK
+    data_type: string
+    expression: upper(trim(agent_code))
+    business_key: true
+    description: Agent code from the policy admin system.
+  - name: AgentName
+    data_type: string
+    expression: trim(agent_name)
+    description: Agent full name.
+    meta: {pii: true}
+  - name: BranchCode
+    data_type: string
+    expression: upper(trim(branch_code))
+    description: Branch the agent belongs to.
+  - name: IsActive
+    data_type: boolean
+    expression: active_ind = 'Y'
+    description: True when the agent may write new business.

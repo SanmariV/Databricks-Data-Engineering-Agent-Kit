@@ -1,0 +1,6 @@
+# For scripts/build_information_matrix.py
+openpyxl>=3.1
+pyyaml>=6.0
+# profile step only (same as the dbde toolkit)
+databricks-sdk>=0.40
+databricks-sql-connector>=3.4

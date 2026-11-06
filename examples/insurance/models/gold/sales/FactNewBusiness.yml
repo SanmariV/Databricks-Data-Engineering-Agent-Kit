@@ -1,0 +1,44 @@
+description: One row per issued new business policy. Grain = Policy_BK.
+synonyms: [New business, Policies written, Sales]
+ai_instructions: Use for how many policies were sold and how much premium they
+  bring in. A policy counts once, on its issue date. Cancelled policies are not
+  in this table.
+load:
+  mode: incremental
+  column: IssueDate
+  lookback_days: 7
+columns:
+  - name: Policy_BK
+    data_type: varchar(20)
+    business_key: true
+    description: Policy number.
+  - name: DimAgent_SK
+    data_type: bigint
+    references: distribution.DimAgent
+    description: Writing agent version valid on the issue date (-1 unknown).
+  - name: ProductCode
+    data_type: varchar(20)
+    description: Product code.
+    synonyms: [Product, Plan]
+  - name: AnnualPremiumAmount
+    data_type: decimal(18,2)
+    description: Annualised premium in policy currency.
+    synonyms: [Premium, Annual premium]
+    tests:
+      - accepted_range: {min: 0}
+  - name: IssueDate
+    data_type: date
+    description: Date the policy was issued.
+measures:
+  - name: NewBusinessCount
+    expression: count(Policy_BK)
+    description: Number of new business policies issued.
+    synonyms: [Policies sold, Policy count]
+    format: "#,0"
+  - name: AnnualPremiumTotal
+    expression: sum(AnnualPremiumAmount)
+    description: Total annualised premium of new business.
+    synonyms: [Total premium, New business premium]
+    format: "#,0.00"
+tests:
+  - row_count_between: {min: 1, severity: warn}

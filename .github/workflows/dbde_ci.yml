@@ -1,0 +1,27 @@
+# Pull request checks. Offline: no Databricks connection or secret needed.
+# Deploying to test/prod is a separate release pipeline (standards,
+# section 9.4). It runs `python -m dbde build --target <env>` as the
+# release service principal with DBDE_ALLOW_PROTECTED=1.
+name: dbde-ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e ".[dev,matrix]"
+      - name: Specs load
+        run: python -m dbde parse
+      - name: Project rules and render drift
+        run: python -m dbde check
+      - name: Toolkit tests
+        run: python -m pytest -q

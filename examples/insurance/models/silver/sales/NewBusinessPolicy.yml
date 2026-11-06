@@ -1,0 +1,20 @@
+description: >
+  One row per issued policy that counts as new business, with its writing
+  agent. Grain = Policy_BK.
+columns:
+  - name: Policy_BK
+    data_type: string
+    business_key: true
+    description: Policy number.
+  - name: Agent_BK
+    data_type: string
+    description: Writing agent code.
+  - name: ProductCode
+    data_type: string
+    description: Product code.
+  - name: AnnualPremiumAmount
+    data_type: decimal(18,2)
+    description: Annualised premium in policy currency.
+  - name: IssueDate
+    data_type: date
+    description: Date the policy was issued.

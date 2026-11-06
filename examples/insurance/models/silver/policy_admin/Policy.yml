@@ -1,0 +1,49 @@
+description: >
+  One row per policy as currently held in the policy admin system.
+  Grain = Policy_BK.
+source: {source: policy_admin, table: policy}
+load:
+  mode: incremental
+  column: _ingested_at
+  lookback_days: 3
+dedupe_order_by: ["_ingested_at desc"]
+columns:
+  - name: Policy_BK
+    data_type: string
+    expression: upper(trim(policy_no))
+    business_key: true
+    description: Policy number from the policy admin system.
+  - name: Agent_BK
+    data_type: string
+    expression: upper(trim(agent_code))
+    description: Code of the writing agent. Links to Agent.Agent_BK.
+  - name: ProductCode
+    data_type: string
+    expression: upper(trim(product_code))
+    description: Product code of the policy.
+  - name: PolicyStatusCode
+    data_type: string
+    expression: coalesce(upper(trim(policy_status)), 'UNKNOWN')
+    description: Policy status code (IF in force, LA lapsed, UNKNOWN missing).
+    tests:
+      - accepted_values: {values: [IF, LA, UNKNOWN]}
+  - name: AnnualPremiumAmount
+    data_type: decimal(18,2)
+    expression: annual_prem
+    description: Annualised premium in policy currency.
+    tests:
+      - accepted_range: {min: 0}
+  - name: ApplicationDate
+    data_type: date
+    expression: application_dt
+    description: Date the application was received.
+  - name: IssueDate
+    data_type: date
+    expression: issue_dt
+    description: Date the policy was issued; empty while not issued.
+  - name: IngestedTimestamp
+    data_type: timestamp
+    expression: _ingested_at
+    description: When bronze landed the row (UTC).
+tests:
+  - expression: "IssueDate is null or IssueDate >= ApplicationDate"

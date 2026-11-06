@@ -1,0 +1,26 @@
+# Generated
+target/
+.databricks/
+*.egg-info/
+build/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets and local settings
+.env
+.env.*
+*.env
+.databrickscfg
+
+# Office files (the Information Matrix holds sampled data)
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.xltx
+*.doc
+*.docx
+*.pdf
+!docs/information_matrix_template.xlsx

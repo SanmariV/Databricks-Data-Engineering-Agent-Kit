@@ -1,0 +1,24 @@
+description: One row per agent version (SCD type 2). Grain = Agent_BK, StartDate.
+scd_type: 2
+synonyms: [Broker, Intermediary, Adviser]
+ai_instructions: Pick the version whose StartDate and EndDate cover the date
+  you are asking about. For today, filter IsCurrent = true.
+columns:
+  - name: Agent_BK
+    data_type: varchar(20)
+    business_key: true
+    description: Agent code from the policy admin system.
+  - name: AgentName
+    data_type: varchar(200)
+    description: Agent full name.
+    meta:
+      pii: true
+      matrix: {example: "Thabo M***"}
+  - name: BranchCode
+    data_type: varchar(10)
+    description: Branch the agent belongs to.
+  - name: IsActive
+    data_type: boolean
+    description: True when the agent may write new business.
+meta:
+  matrix: {business_question: Who, scd_type: 2}

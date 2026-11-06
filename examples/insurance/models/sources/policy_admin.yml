@@ -1,0 +1,26 @@
+source: policy_admin
+description: Policy administration system tables, landed daily into the bronze catalog by Lakeflow pipelines.
+freshness:
+  loaded_at_column: _ingested_at
+  warn_after_hours: 26
+  error_after_hours: 48
+tables:
+  - name: policy
+    description: One row per policy version as held in the admin system.
+    columns:
+      - {name: policy_no, data_type: string}
+      - {name: agent_code, data_type: string}
+      - {name: product_code, data_type: string}
+      - {name: policy_status, data_type: string}
+      - {name: annual_prem, data_type: decimal(18,2)}
+      - {name: application_dt, data_type: date}
+      - {name: issue_dt, data_type: date}
+      - {name: _ingested_at, data_type: timestamp}
+  - name: agent
+    description: One row per agent version as held in the admin system.
+    columns:
+      - {name: agent_code, data_type: string}
+      - {name: agent_name, data_type: string}
+      - {name: branch_code, data_type: string}
+      - {name: active_ind, data_type: string}
+      - {name: _ingested_at, data_type: timestamp}

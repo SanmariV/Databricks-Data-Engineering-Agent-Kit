@@ -1,0 +1,40 @@
+# Project settings for the dbde toolkit (python -m dbde).
+# No hosts, ids or secrets here: each target names a Databricks CLI profile
+# (created once with `databricks auth login --profile <name>`), and CI signs
+# in with DATABRICKS_HOST / DATABRICKS_CLIENT_ID / DATABRICKS_CLIENT_SECRET.
+
+project: my_databricks_project      # snake_case; set by /scaffold-databricks-project
+
+genie:
+  pii: exclude                      # PII columns never reach metric views or Genie
+
+daily_load:                         # resources/dbde_daily_load.job.yml
+  schedule: "0 0 5 * * ?"           # Quartz cron: 05:00 every day
+  timezone: UTC
+  # notify_on_failure: [data-engineering@example.com]
+
+maintenance:                        # resources/dbde_table_maintenance.job.yml
+  schedule: "0 0 3 ? * SUN"         # weekly OPTIMIZE + VACUUM
+  timezone: UTC
+  vacuum_retain_hours: 168          # never below 7 days
+
+defaults:
+  freshness:                        # written into new source specs
+    loaded_at_column: _ingested_at
+    warn_after_hours: 26
+    error_after_hours: 48
+
+targets:
+  dev:
+    profile: dbde-dev                # Databricks CLI profile (local sign-in)
+    warehouse: TODO(SQL warehouse name)
+    # catalogs default to <target>_bronze, <target>_silver, <target>_gold
+    # catalogs: {bronze: dev_bronze, silver: dev_silver, gold: dev_gold}
+  test:
+    profile: dbde-test
+    warehouse: TODO(SQL warehouse name)
+    protected: true                 # only the release pipeline writes (DBDE_ALLOW_PROTECTED=1)
+  prod:
+    profile: dbde-prod
+    warehouse: TODO(SQL warehouse name)
+    protected: true

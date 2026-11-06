@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dbde"
+version = "0.1.0"
+description = "Databricks data engineering toolkit: specs -> silver notebooks, gold procedures, metric views, Genie spaces, tests. No dbt."
+requires-python = ">=3.10"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+databricks = ["databricks-sdk>=0.40", "databricks-sql-connector>=3.4"]
+matrix = ["openpyxl>=3.1"]
+dev = ["pytest>=8.0", "sqlglot>=25.0"]
+
+[project.scripts]
+dbde = "dbde.__main__:main"
+
+[tool.setuptools]
+packages = ["dbde"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

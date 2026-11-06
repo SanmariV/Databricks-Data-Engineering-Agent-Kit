@@ -1,0 +1,144 @@
+{
+  "version": 2,
+  "config": {
+    "sample_questions": [
+      {
+        "id": "12aa62022f27b3214674a0dd93b4a97f",
+        "question": [
+          "What is the annual premium of new business by branch this year?"
+        ]
+      },
+      {
+        "id": "b373ee709bed5cf04e62227c22ddbefe",
+        "question": [
+          "Which products bring in the most new business premium?"
+        ]
+      },
+      {
+        "id": "f3a569f8cb3cff6f3173a14f855cdfe7",
+        "question": [
+          "How many new business policies did we issue last month?"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "${gold_catalog}.sales.FactNewBusiness",
+        "description": [
+          "One row per issued new business policy. Grain = Policy_BK."
+        ]
+      }
+    ],
+    "metric_views": [
+      {
+        "identifier": "${gold_catalog}.sales.MetricNewBusiness",
+        "description": [
+          "Metric view of FactNewBusiness (measures: NewBusinessCount, AnnualPremiumTotal); query with MEASURE(<name>) and GROUP BY ALL. One row per issued new business policy. Grain = Policy_BK."
+        ]
+      }
+    ]
+  },
+  "instructions": {
+    "text_instructions": [
+      {
+        "id": "007ce3070d5196f0cb4fcd5d17641170",
+        "content": [
+          "- Answer from sales.MetricNewBusiness. Use MEASURE(NewBusinessCount) for\n",
+          "  \"how many policies\" and MEASURE(AnnualPremiumTotal) for \"how much premium\".\n",
+          "- A policy counts once, on its issue date. \"This year\" means issue dates in\n",
+          "  the current calendar year; months are calendar months.\n",
+          "- Premium is annualised and in policy currency; say so when you show it.\n",
+          "- Branch and agent status describe the agent version valid on the issue date.\n",
+          "- Never name or list individual agents: the space has no agent names, and\n",
+          "  questions about a person are out of scope. Say so and offer a branch view.\n",
+          "- If a question needs data outside new business (claims, lapses, cancelled\n",
+          "  policies), say the space cannot answer it.\n",
+          "\n",
+          "Table guidance:\n",
+          "- FactNewBusiness, MetricNewBusiness: Use for how many policies were sold and how much premium they bring in. A policy counts once, on its issue date. Cancelled policies are not in this table."
+        ]
+      }
+    ],
+    "example_question_sqls": [
+      {
+        "id": "01878c07a791d8032f3809130c224ff3",
+        "question": [
+          "What is the average annual premium per new business policy?"
+        ],
+        "sql": [
+          "select\n",
+          "    sum(fact.AnnualPremiumAmount) / count(fact.Policy_BK)\n",
+          "        as AverageAnnualPremium\n",
+          "from ${gold_catalog}.sales.FactNewBusiness as fact"
+        ]
+      },
+      {
+        "id": "24102a15ad5be1a5c983fd998ac0f30f",
+        "question": [
+          "How many new business policies were issued per month this year?"
+        ],
+        "sql": [
+          "select\n",
+          "    date_trunc('MONTH', IssueDate) as IssueMonth,\n",
+          "    measure(NewBusinessCount) as NewBusinessCount\n",
+          "from ${gold_catalog}.sales.MetricNewBusiness\n",
+          "where year(IssueDate) = year(current_date())\n",
+          "group by all\n",
+          "order by IssueMonth"
+        ]
+      },
+      {
+        "id": "6f8ce98f12acb459bf8738c9d2965dbf",
+        "question": [
+          "What is the new business annual premium by branch?"
+        ],
+        "sql": [
+          "select\n",
+          "    BranchCode,\n",
+          "    measure(AnnualPremiumTotal) as AnnualPremiumTotal\n",
+          "from ${gold_catalog}.sales.MetricNewBusiness\n",
+          "group by all\n",
+          "order by AnnualPremiumTotal desc"
+        ]
+      },
+      {
+        "id": "b063d4ab55523d6a2ab431ba32adcd02",
+        "question": [
+          "Which five products brought in the most premium last year?"
+        ],
+        "sql": [
+          "select\n",
+          "    ProductCode,\n",
+          "    measure(AnnualPremiumTotal) as AnnualPremiumTotal,\n",
+          "    measure(NewBusinessCount) as NewBusinessCount\n",
+          "from ${gold_catalog}.sales.MetricNewBusiness\n",
+          "where year(IssueDate) = year(current_date()) - 1\n",
+          "group by all\n",
+          "order by AnnualPremiumTotal desc\n",
+          "limit 5"
+        ]
+      }
+    ]
+  },
+  "benchmarks": {
+    "questions": [
+      {
+        "id": "ea030961f6f01c694869b9d685740277",
+        "question": [
+          "How many new business policies were issued in total?"
+        ],
+        "answer": [
+          {
+            "format": "SQL",
+            "content": [
+              "select measure(NewBusinessCount) as NewBusinessCount\n",
+              "from ${gold_catalog}.sales.MetricNewBusiness"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

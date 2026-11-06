@@ -1,0 +1,65 @@
+title: Sales Analyst
+description: >
+  New business for sales managers and the distribution team: how many
+  policies were issued and how much annual premium they bring in, by product,
+  branch, agent status and issue date.
+instructions: |
+  - Answer from sales.MetricNewBusiness. Use MEASURE(NewBusinessCount) for
+    "how many policies" and MEASURE(AnnualPremiumTotal) for "how much premium".
+  - A policy counts once, on its issue date. "This year" means issue dates in
+    the current calendar year; months are calendar months.
+  - Premium is annualised and in policy currency; say so when you show it.
+  - Branch and agent status describe the agent version valid on the issue date.
+  - Never name or list individual agents: the space has no agent names, and
+    questions about a person are out of scope. Say so and offer a branch view.
+  - If a question needs data outside new business (claims, lapses, cancelled
+    policies), say the space cannot answer it.
+tables:
+  - sales.MetricNewBusiness
+  - sales.FactNewBusiness
+sample_questions:
+  - How many new business policies did we issue last month?
+  - What is the annual premium of new business by branch this year?
+  - Which products bring in the most new business premium?
+examples:
+  - question: How many new business policies were issued per month this year?
+    query: |
+      select
+          date_trunc('MONTH', IssueDate) as IssueMonth,
+          measure(NewBusinessCount) as NewBusinessCount
+      from {{ ref('sales.MetricNewBusiness') }}
+      where year(IssueDate) = year(current_date())
+      group by all
+      order by IssueMonth
+  - question: What is the new business annual premium by branch?
+    query: |
+      select
+          BranchCode,
+          measure(AnnualPremiumTotal) as AnnualPremiumTotal
+      from {{ ref('sales.MetricNewBusiness') }}
+      group by all
+      order by AnnualPremiumTotal desc
+  - question: Which five products brought in the most premium last year?
+    query: |
+      select
+          ProductCode,
+          measure(AnnualPremiumTotal) as AnnualPremiumTotal,
+          measure(NewBusinessCount) as NewBusinessCount
+      from {{ ref('sales.MetricNewBusiness') }}
+      where year(IssueDate) = year(current_date()) - 1
+      group by all
+      order by AnnualPremiumTotal desc
+      limit 5
+  - question: What is the average annual premium per new business policy?
+    query: |
+      select
+          sum(fact.AnnualPremiumAmount) / count(fact.Policy_BK)
+              as AverageAnnualPremium
+      from {{ ref('sales.FactNewBusiness') }} as fact
+benchmarks:
+  - question: How many new business policies were issued in total?
+    query: |
+      select measure(NewBusinessCount) as NewBusinessCount
+      from {{ ref('sales.MetricNewBusiness') }}
+permissions:
+  can_run: [TODO(consumer group)]
