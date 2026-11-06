@@ -73,6 +73,7 @@ One SQL warehouse per environment serves the toolkit (tests, `show`, gold deploy
 | prod | `prod_bronze`, `prod_silver`, `prod_gold` | Release pipeline / prod service principal |
 
 - Catalog names come from `dbde.yml` (`targets.<env>.catalogs`, default `<env>_<layer>`). Rendered code never names a catalog. It uses the tokens `${bronze_catalog}`, `${silver_catalog}` and `${gold_catalog}`. Notebooks replace them from job parameters, and `dbde deploy` replaces them in the gold SQL. So the code never changes between environments.
+- Schema layout: by default one schema per spec folder (`dev_silver.policy_admin.Policy`). A client that keeps all layers in one catalog sets `layer_schemas` in `dbde.yml` (`life_insurance.silver.Policy`, `life_insurance.gold.DimAgent`). Then table names must be unique per layer (rule N5), and the `ops` objects stay in `<gold catalog>.ops`.
 - Schemas are created by the kit (`CREATE SCHEMA IF NOT EXISTS`). Catalogs are created by a platform admin. **[Decision for the client]**: one workspace per environment, or one workspace with per-environment catalogs bound to it.
 - Business consumers MUST NOT have `USE CATALOG` on silver or bronze. They get `SELECT` on the gold objects of a Genie space (rendered `gold/ops/grants/<Space>.sql`) and `CAN_RUN` on the space.
 - Dev and test bronze SHOULD read prod bronze (Delta Sharing, or a view catalog over prod bronze), never copies. Before personal data is exposed to developers, the client MUST approve it. **[Decision for the client]**

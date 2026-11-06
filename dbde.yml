@@ -18,6 +18,12 @@ maintenance:                        # resources/dbde_table_maintenance.job.yml
   timezone: UTC
   vacuum_retain_hours: 168          # never below 7 days
 
+# Where tables are created. Default: one schema per spec folder, e.g.
+# dev_silver.policy_admin.Policy. With one catalog that holds bronze, silver
+# and gold schemas (life_insurance.silver.Policy), set every layer of
+# targets.<env>.catalogs to that catalog and uncomment this:
+# layer_schemas: {bronze: bronze, silver: silver, gold: gold}
+
 defaults:
   freshness:                        # written into new source specs
     loaded_at_column: _ingested_at
@@ -30,6 +36,8 @@ targets:
     warehouse: TODO(SQL warehouse name)
     # catalogs default to <target>_bronze, <target>_silver, <target>_gold
     # catalogs: {bronze: dev_bronze, silver: dev_silver, gold: dev_gold}
+    # one catalog for all layers (with layer_schemas above):
+    # catalogs: {bronze: life_insurance, silver: life_insurance, gold: life_insurance}
   test:
     profile: dbde-test
     warehouse: TODO(SQL warehouse name)

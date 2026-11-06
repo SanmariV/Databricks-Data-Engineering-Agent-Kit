@@ -125,6 +125,8 @@ You need a Unity Catalog-enabled workspace with serverless compute. Create three
 
 Other names are fine: set them in `dbde.yml` under `targets.dev.catalogs`.
 
+One catalog with `bronze`, `silver` and `gold` schemas works too (`life_insurance.silver.Policy`). Set every layer of `targets.dev.catalogs` to that catalog and add `layer_schemas: {bronze: bronze, silver: silver, gold: gold}` to `dbde.yml`. Spec folders still group the specs, but every silver table goes into the `silver` schema and every gold table into the `gold` schema, so table names must be unique per layer (`dbde check`, rule N5). The data quality objects stay in `<catalog>.ops`.
+
 ### 3a. Sandbox: bronze from CSV files
 
 No ingestion yet? Create a schema per source in `dev_bronze`, then upload CSVs with **Catalog Explorer → Create → Table** (one table per file). Add an `_ingested_at` timestamp column if you can (`current_timestamp()` at upload); without it, use `load: {mode: full}` and drop the freshness rule. The upload wizard infers types; that is fine for bronze.

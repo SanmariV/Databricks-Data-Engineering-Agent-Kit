@@ -263,7 +263,7 @@ def build(project: Project, target: str = "dev") -> Dict[str, Any]:
             "unique_id": uid, "resource_type": "model", "package_name": name,
             "name": manifest_name(model), "alias": model.name,
             "database": catalogs[model.layer],
-            "schema": model.schema,
+            "schema": model.db_schema or model.schema,
             "relation_name": _relation(project, model, catalogs),
             "description": model.description,
             "columns": _columns(model),

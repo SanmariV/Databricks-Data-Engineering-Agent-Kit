@@ -9,7 +9,7 @@ description: Connect the kit to a Databricks workspace. Asks for the project nam
 - Dev workspace URL: **${input:host:e.g. https://adb-1234567890123456.7.azuredatabricks.net}**
 - Dev SQL warehouse name: **${input:warehouse:exact name from SQL → SQL Warehouses, e.g. Serverless Starter Warehouse}**
 - Test and prod SQL warehouse names: **${input:release_warehouses:e.g. "test: DE Test, prod: DE Prod", or skip}**
-- Catalog names: **${input:catalogs:default (dev_bronze, dev_silver, dev_gold, ...), or e.g. "dev: bronze_dev, silver_dev, gold_dev"}**
+- Catalog names: **${input:catalogs:default (dev_bronze, dev_silver, dev_gold, ...), or e.g. "dev: bronze_dev, silver_dev, gold_dev", or one catalog with bronze/silver/gold schemas, e.g. "dev: life_insurance"}**
 
 Follow `AGENTS.md`. This prompt only changes `dbde.yml` and the rendered files. It never writes a host, token or id into the repo.
 
@@ -23,7 +23,9 @@ To connect the kit I need:
 2. Dev workspace URL: copy it from the browser address bar when you are in Databricks (up to .net or .com)
 3. Dev SQL warehouse name: Databricks → SQL Warehouses, copy the name exactly
 4. Test and prod SQL warehouse names, or "skip" if you don't know them yet
-5. Catalog names, or "default" for dev_bronze / dev_silver / dev_gold
+5. Catalog names, or "default" for dev_bronze / dev_silver / dev_gold.
+   If you use ONE catalog with bronze, silver and gold schemas inside it
+   (e.g. life_insurance.bronze, life_insurance.silver), give that catalog name.
 ```
 
 - Never guess a value. If the user says "skip" for test and prod, keep `TODO(SQL warehouse name)` there and list it.
@@ -34,6 +36,7 @@ To connect the kit I need:
 - `project:` the project name.
 - `targets.dev.warehouse:` the dev warehouse name; `targets.test.warehouse` and `targets.prod.warehouse` if given.
 - `targets.<env>.catalogs: {bronze: ..., silver: ..., gold: ...}` only if the user gave non-default names.
+- One catalog for all layers (the user gave a single catalog name, or the catalog holds `bronze` / `silver` / `gold` schemas): set every layer of `targets.<env>.catalogs` to that catalog, **and** set `layer_schemas: {bronze: bronze, silver: silver, gold: gold}` (use the user's schema names). Without `layer_schemas` the kit creates one schema per spec folder (`<catalog>.policy_admin.Policy`) instead of `<catalog>.silver.Policy`. Check the schemas first: `databricks schemas list <catalog> -p dbde-dev`.
 - Keep `profile: dbde-dev` (and `dbde-test`, `dbde-prod`). **Never write the workspace URL into `dbde.yml` or any other repo file.** It goes only into the CLI profile in step 3.
 
 ## 3. Sign in

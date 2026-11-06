@@ -86,6 +86,18 @@ class Config:
                 for layer in LAYERS}
 
     @property
+    def layer_schemas(self) -> Dict[str, str]:
+        """Return layer -> schema when each layer has one fixed schema.
+
+        Workspaces with one catalog per project (``life_insurance.silver``,
+        ``life_insurance.gold``) set ``layer_schemas`` in ``dbde.yml``. A
+        layer that is not listed keeps one schema per spec folder.
+        """
+        given = self.raw.get("layer_schemas") or {}
+        return {layer: str(given[layer]) for layer in LAYERS
+                if given.get(layer)}
+
+    @property
     def genie_pii(self) -> str:
         """Return how Genie items treat PII columns: ``exclude`` only."""
         return str((self.raw.get("genie") or {}).get("pii", "exclude"))
@@ -143,12 +155,14 @@ class Model:
         layer: ``silver`` or ``gold``.
         kind: ``source`` / ``integrated`` (silver), ``dimension`` / ``fact`` /
             ``bridge`` (gold).
-        schema: Schema name (the folder).
+        schema: Schema name (the folder). Used by ``ref()`` and file paths.
         name: Table name (the file name).
         path: Spec file.
         sql: Body of the ``.sql`` file, or None.
         spec: The parsed spec.
         columns: Declared columns, in order.
+        db_schema: Schema the table is created in: the folder, or the
+            layer's schema when ``dbde.yml`` sets ``layer_schemas``.
     """
 
     layer: str
@@ -159,11 +173,17 @@ class Model:
     sql: Optional[str]
     spec: Dict[str, Any]
     columns: List[Column]
+    db_schema: str = ""
 
     @property
     def key(self) -> str:
         """Return ``schema.Table``, the name used by ``ref()``."""
         return f"{self.schema}.{self.name}"
+
+    @property
+    def table(self) -> str:
+        """Return ``schema.Table`` as created in the catalog."""
+        return f"{self.db_schema or self.schema}.{self.name}"
 
     @property
     def description(self) -> str:
@@ -403,7 +423,7 @@ class Project:
             ``catalog.schema.Table``.
         """
         catalog = (catalogs or TOKENS)[model.layer]
-        return f"{catalog}.{model.schema}.{model.name}"
+        return f"{catalog}.{model.table}"
 
     def metric_view_relation(self, fact: Model,
                              catalogs: Optional[Dict[str, str]] = None) -> str:
@@ -417,7 +437,7 @@ class Project:
             ``catalog.schema.MetricX``.
         """
         catalog = (catalogs or TOKENS)["gold"]
-        return f"{catalog}.{fact.schema}.{fact.metric_view}"
+        return f"{catalog}.{fact.db_schema or fact.schema}."             f"{fact.metric_view}"
 
     def source_relation(self, source: str, table: str,
                         catalogs: Optional[Dict[str, str]] = None) -> str:
@@ -574,11 +594,13 @@ def _column(raw: Any) -> Column:
     )
 
 
-def _load_source(path: Path) -> Source:
+def _load_source(path: Path, default_schema: str = "") -> Source:
     """Read one ``models/sources/<source>.yml`` file.
 
     Args:
         path: Spec file.
+        default_schema: Bronze schema when the spec names none; empty means
+            the source name.
 
     Returns:
         The source.
@@ -597,7 +619,8 @@ def _load_source(path: Path) -> Source:
             source=name, name=str(table["name"]),
             description=table.get("description"), columns=cols,
             meta=dict(table.get("meta") or {}))
-    return Source(name=name, schema=str(raw.get("schema") or name),
+    return Source(name=name,
+                  schema=str(raw.get("schema") or default_schema or name),
                   description=raw.get("description"),
                   freshness=dict(raw.get("freshness") or {}),
                   tables=tables, path=path)
@@ -656,7 +679,8 @@ def load_project(root: Path) -> Project:
     base = root / "models"
     for path in sorted((base / "sources").glob("*.yml")):
         try:
-            source = _load_source(path)
+            source = _load_source(path,
+                                  config.layer_schemas.get("bronze", ""))
             sources[source.name] = source
         except (SpecError, KeyError, TypeError, AttributeError) as exc:
             errors.append((rel(path, root), str(exc)))
@@ -667,6 +691,7 @@ def load_project(root: Path) -> Project:
             except SpecError as exc:
                 errors.append((rel(path, root), str(exc)))
                 continue
+            model.db_schema = config.layer_schemas.get(layer, model.schema)
             if model.key in models:
                 errors.append((rel(path, root),
                                f"{model.key} is defined twice"))

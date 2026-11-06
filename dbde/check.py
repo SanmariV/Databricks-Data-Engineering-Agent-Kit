@@ -171,6 +171,21 @@ def run_checks(project: Project) -> List[Finding]:
             "the gold schema 'ops' is reserved for the kit's data quality "
             "objects")
 
+    if project.config.layer_schemas.get("gold") == "ops":
+        add("N5", "error", root / "dbde.yml",
+            "layer_schemas.gold cannot be 'ops'; it is reserved for the "
+            "kit's data quality objects")
+    created: dict = {}
+    for model in project.silver() + project.gold():
+        created.setdefault((model.layer, model.table.lower()),
+                           []).append(model)
+    for (layer, table), models in created.items():
+        if len(models) > 1:
+            add("N5", "error", models[1].path,
+                f"{', '.join(m.key for m in models)} would all be created "
+                f"as {layer} table {models[0].table} (layer_schemas in "
+                "dbde.yml); give them different table names")
+
     gold_names: dict = {}
     for model in project.gold():
         gold_names.setdefault(model.name, []).append(model.key)
