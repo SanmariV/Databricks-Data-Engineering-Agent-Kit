@@ -46,6 +46,7 @@ Do not write notebooks, stored procedures, `MERGE`, `CREATE TABLE`, metric views
 - Silver never reads gold. A dimension reading a fact is a design smell. Gold tables never read metric views.
 - Never hard-code catalog names (`dev_silver.`, `prod_gold.`, ...). Use `{{ ref('schema.Table') }}`. The kit resolves it per environment.
 - The schema of a table is its folder. The table name is its file name. The schema `ops` is reserved.
+- Exception: when `dbde.yml` sets `layer_schemas` (one catalog with `bronze` / `silver` / `gold` schemas), every silver table goes into the `silver` schema and every gold table into `gold`. Folders still group the specs and `ref()` keys. Table names must be unique per layer. If a workspace has one catalog with layer schemas and `layer_schemas` is missing, set it. Don't let the kit create folder schemas there.
 
 ## Specs
 

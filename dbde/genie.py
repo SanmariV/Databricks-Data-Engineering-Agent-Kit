@@ -373,7 +373,8 @@ def grants_sql(project: Project, space: GenieSpace) -> str:
     tables, facts = space_sources(project, space)
     objects = [project.relation(m) for m in tables]
     objects += [project.metric_view_relation(m) for m in facts]
-    schemas = sorted({f"${{gold_catalog}}.{m.schema}" for m in tables + facts})
+    schemas = sorted({f"${{gold_catalog}}.{m.db_schema or m.schema}"
+                      for m in tables + facts})
     spec = space.path.relative_to(project.config.root).as_posix()
     lines = [f"-- Read access for the consumers of Genie space {space.name}.",
              f"-- {GENERATED.format(spec=spec)}", ""]

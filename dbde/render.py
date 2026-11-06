@@ -282,7 +282,7 @@ def _silver_cells(project: Project, model: Model) -> List[Tuple[str, str]]:
     keys = ", ".join(model.business_keys) or "TODO(business key)"
     load = model.load
     common = [
-        f"TABLE = {model.key!r}",
+        f"TABLE = {model.table!r}",
         _py_list("BUSINESS_KEYS", [repr(k) for k in model.business_keys]),
         f"DESCRIPTION = {_wrap(model.description, '')}",
     ]
@@ -313,7 +313,7 @@ def _silver_cells(project: Project, model: Model) -> List[Tuple[str, str]]:
 | | |
 |---|---|
 | Source | `<bronze_catalog>.{schema}.{table}` (bronze, read-only) |
-| Target | `<silver_catalog>.{model.key}` (one table per notebook) |
+| Target | `<silver_catalog>.{model.table}` (one table per notebook) |
 | Read | {how} |
 | Load | Delta MERGE on `{keys}`; audit columns maintained |
 | Parameters | `load_date` (default: yesterday, UTC), `load_step_id`, `full_refresh`, catalogs |
@@ -375,7 +375,7 @@ def _silver_cells(project: Project, model: Model) -> List[Tuple[str, str]]:
 | | |
 |---|---|
 | Inputs | {inputs} |
-| Target | `<silver_catalog>.{model.key}` (one table per notebook) |
+| Target | `<silver_catalog>.{model.table}` (one table per notebook) |
 | Logic | The SELECT in `{spec[:-4]}.sql` |
 | Load | Delta MERGE on `{keys}`; audit columns maintained |
 | Parameters | `load_date` (default: yesterday, UTC), `load_step_id`, catalogs |
@@ -496,7 +496,7 @@ def _ops_maintain_cells(project: Project) -> List[Tuple[str, str]]:
     """Return the cells of the table maintenance notebook."""
     retention = int(project.config.maintenance.get("vacuum_retain_hours",
                                                    168))
-    tables = [repr((m.layer, m.key)) for m in project.silver()
+    tables = [repr((m.layer, m.table)) for m in project.silver()
               + project.gold()]
     tables.append(repr(("gold", "ops.DataQualityResult")))
     intro = f"""# Ops: table maintenance
@@ -630,11 +630,12 @@ def gold_table_sql(project: Project, model: Model) -> str:
     lines = [f"-- Gold table {model.key} ({model.kind}"
              + (f", SCD type {model.scd_type}" if model.scd_type else "")
              + ").", f"-- {GENERATED.format(spec=spec)}", "",
-             _schema_statement(model.schema), "",
+             _schema_statement(model.db_schema or model.schema), "",
              f"CREATE TABLE IF NOT EXISTS {rel} (",
              ",\n".join(body), ")", "USING DELTA",
              f"COMMENT {sql_string(model.description)};", GO, ""]
     table = model.name.lower()
+    db_schema = (model.db_schema or model.schema).lower()
     nullable = [(n, t, c) for n, t, null, c in cols if null]
     if nullable or refs:
         lines += ["-- Columns and keys added to the spec after the first "
@@ -647,7 +648,7 @@ def gold_table_sql(project: Project, model: Model) -> str:
                 "    IF NOT EXISTS (",
                 f"        SELECT 1 FROM {TOKENS['gold']}.information_schema"
                 ".columns",
-                f"        WHERE table_schema = '{model.schema}' "
+                f"        WHERE table_schema = '{db_schema}' "
                 f"AND table_name = '{table}'",
                 f"            AND lower(column_name) = '{name.lower()}'",
                 "    ) THEN",
@@ -662,7 +663,7 @@ def gold_table_sql(project: Project, model: Model) -> str:
                 "    IF NOT EXISTS (",
                 f"        SELECT 1 FROM {TOKENS['gold']}.information_schema"
                 ".table_constraints",
-                f"        WHERE table_schema = '{model.schema}' "
+                f"        WHERE table_schema = '{db_schema}' "
                 f"AND lower(constraint_name) = '{fk.lower()}'",
                 "    ) THEN",
                 f"        ALTER TABLE {rel} ADD CONSTRAINT {fk}",
@@ -724,7 +725,7 @@ def _indent(text: str, spaces: int) -> str:
 
 def procedure_name(model: Model) -> str:
     """Return ``schema.Load<Table>``, the load procedure of a gold model."""
-    return f"{model.schema}.Load{model.name}"
+    return f"{model.db_schema or model.schema}.Load{model.name}"
 
 
 def gold_procedure_sql(project: Project, model: Model) -> str:

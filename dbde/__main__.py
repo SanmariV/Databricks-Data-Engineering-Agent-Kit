@@ -220,7 +220,8 @@ def cmd_generate_source(args) -> int:
         Exit code.
     """
     project = _project()
-    schema = (args.schema or args.source).replace("'", "")
+    schema = (args.schema or project.config.layer_schemas.get("bronze")
+              or args.source).replace("'", "")
     catalog = project.config.catalogs(args.target)["bronze"]
     sql_text = (f"select table_name, column_name, full_data_type, comment "
                 f"from {catalog}.information_schema.columns "

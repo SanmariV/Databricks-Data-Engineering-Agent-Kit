@@ -443,3 +443,50 @@ def test_cli_check_runs_in_example():
                                  "SYSTEMROOT": "C:\\Windows",
                                  "PATH": ""})
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def _layer_schemas(project_root: Path) -> None:
+    """Switch a scratch project to one schema per layer."""
+    path = project_root / "dbde.yml"
+    path.write_text(path.read_text(encoding="utf-8")
+                    + "\nlayer_schemas: {bronze: bronze, silver: silver, "
+                      "gold: gold}\n", encoding="utf-8")
+
+
+def test_layer_schemas_put_tables_in_the_layer_schema(scratch):
+    _layer_schemas(scratch)
+    project = load_project(scratch)
+    sql = "select * from {{ ref('policy_admin.Policy') }}"
+    assert project.resolve_sql(sql) == \
+        "select * from ${silver_catalog}.silver.Policy"
+    dim = project.models["distribution.DimAgent"]
+    fact = project.models["sales.FactNewBusiness"]
+    assert project.relation(dim) == "${gold_catalog}.gold.DimAgent"
+    assert project.metric_view_relation(fact) == \
+        "${gold_catalog}.gold.MetricNewBusiness"
+    assert render.procedure_name(dim) == "gold.LoadDimAgent"
+    out = render.render_all(project)
+    table = out["gold/distribution/tables/DimAgent.sql"]
+    assert "CREATE SCHEMA IF NOT EXISTS ${gold_catalog}.gold;" in table
+    assert "table_schema = 'distribution'" not in table
+    notebook = out["notebooks/silver/nb_silver_policy_admin_policy.py"]
+    assert "TABLE = 'silver.Policy'" in notebook
+    assert "'silver.Policy'" in out[
+        "notebooks/ops/nb_ops_maintain_tables.py"]
+    assert not any(".distribution." in t or ".policy_admin." in t
+                   for t in out.values())
+    assert not [f for f in check.run_checks(project)
+                if f.severity == "error"]
+
+
+def test_layer_schemas_need_unique_table_names(scratch):
+    _layer_schemas(scratch)
+    _write(scratch / "models" / "silver" / "sales" / "Policy.yml",
+           "description: Duplicate name. Grain = Policy_BK.\ncolumns:\n"
+           "  - name: Policy_BK\n    data_type: string\n"
+           "    business_key: true\n    description: Key.\n")
+    _write(scratch / "models" / "silver" / "sales" / "Policy.sql",
+           "select Policy_BK from {{ ref('policy_admin.Policy') }}")
+    findings = check.run_checks(load_project(scratch))
+    assert any(f.rule == "N5" and "silver.Policy" in f.message
+               for f in findings)
